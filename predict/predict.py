@@ -13,7 +13,7 @@ import csv
 from sklearn.metrics import r2_score
 from utils import *
 
-def load_model(model_path):
+def load_model(model_pathm pretrained_weights=None):
     # 加载模型
     model =None
 
@@ -29,14 +29,16 @@ def load_model(model_path):
         # # 导入模型
         # model = ()
         # model.load_state_dict(torch.load(model_path)
-        model = None
+        checkpoint = torch.load(pretrained_weights, map_location='cpu')
+        model = torch.load(checkpoint['model'])
+        regressor = torch.load(checkpoint['regressor'])
         print('需要手动进行完善')
         sys.exit(1)
     else:
         print('模型路径错误')
         sys.exit(2)
 
-    return model
+    return model ,regressor
 
 def predict(args):
     """ 1 """
@@ -47,6 +49,7 @@ def predict(args):
     model_path = args['model']
     model_name = args['model_name']
     mask = args['mask']
+    pretrained_weights = args['pretrained_weights']
     output_path = make_dir(type)
     print(f"video frames for predict : {frame_n}")
     print(f"Multi Circle predict: {is_multi_circle }")
@@ -57,7 +60,7 @@ def predict(args):
     print(f"model name : {model_name}")
     # 加载参数
 
-    model = load_model(model_path)
+    model, regressor = load_model(model_path)
 
     # 加载dict 存储未预测的基础信息
     with open(os.path.join(output_path, 'validation.json'), 'r+') as f:
@@ -91,6 +94,7 @@ def predict(args):
                         # print(tensor.shape)
                         tensor = tensor.cuda()
                         outputs = model(tensor)
+                        outputs = regressor(tensor)
                         print(outputs)
                         mean = torch.mean(outputs)
                         # print(mean)
@@ -247,6 +251,7 @@ def get_args():
     parser.add_argument('--model', type=str, help='model path', default='input/best_mode045.pt')
     parser.add_argument('--model_name', type=str, help='model name', default='resnet3d')
     parser.add_argument('--mask', type=bool, help='mask used', default=True)
+    parser.add_argument('--pretrained_weights', type=str, help='pretrained_weights', default=None)
     # parser.set_defaults(augment=True)
     args = parser.parse_args()
 
